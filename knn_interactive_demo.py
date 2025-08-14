@@ -25,7 +25,6 @@ class kNNClassificationSimulator:
     """
     
     def __init__(self):
-        # Define colors once
         self.colors = ['#e41a1c', '#377eb8'] # Red, Blue
         self.custom_cmap = ListedColormap(self.colors)
 
@@ -84,48 +83,5 @@ class kNNRegressionSimulator:
     def _plot_regression(self, n_samples, k, noise):
         """Core plotting function for regression."""
         
-        # 1. Generate new data
         X_base = np.sort(10 * np.random.RandomState(42).rand(n_samples))
-        y_true = np.sin(X_base) + X_base / 5
-        y_noisy = y_true + np.random.normal(0, noise, n_samples)
-        
-        X_reshaped = X_base.reshape(-1, 1)
-
-        # 2. Fit the kNN model, ensuring k is valid
-        if k > n_samples: k = n_samples
-        knn = KNeighborsRegressor(n_neighbors=k)
-        knn.fit(X_reshaped, y_noisy)
-        y_pred = knn.predict(X_reshaped)
-        
-        # 3. Calculate BOTH fit metrics
-        rmse_vs_data = np.sqrt(mean_squared_error(y_noisy, y_pred))
-        rmse_vs_true = np.sqrt(mean_squared_error(y_true, y_pred))
-
-        # 4. Plotting
-        plt.style.use('seaborn-v0_8-whitegrid')
-        fig, ax = plt.subplots(figsize=(12, 7))
-
-        ax.plot(X_base, y_true, ':', color='black', lw=2, label='True Underlying Function')
-        sns.scatterplot(x=X_base, y=y_noisy, alpha=0.6, label='Noisy Data Points')
-        ax.plot(X_base, y_pred, '-', color='red', lw=3, label='kNN Prediction Line')
-        
-        info_text = (f'Hyperparameters:\n'
-                     f'  - Data Points: {n_samples}\n'
-                     f'  - k (Neighbors): {k}\n'
-                     f'  - Data Noise: {noise:.2f}\n\n'
-                     f'Performance (Lower is Better):\n'
-                     f'  - RMSE (vs Noisy Data): {rmse_vs_data:.3f}\n'
-                     f'  - RMSE (vs True Function): {rmse_vs_true:.3f}')
-        ax.text(0.02, 0.98, info_text, transform=ax.transAxes, fontsize=12,
-                verticalalignment='top', bbox=dict(boxstyle='round', fc='wheat', alpha=0.8))
-
-        ax.set_title(f'kNN Regression Fit', fontsize=16)
-        ax.legend(loc='lower right')
-        plt.show()
-
-    def run(self):
-        """Launches the interactive regression simulator."""
-        interact(self._plot_regression,
-                 n_samples=IntSlider(value=150, min=30, max=500, step=10, description='Data Points:', layout={'width': '80%'}, continuous_update=False),
-                 k=IntSlider(value=10, min=1, max=100, step=1, description='k (Neighbors):', layout={'width': '80%'}, continuous_update=False),
-                 noise=FloatSlider(value=0.6, min=0, max=2.0, step=0.1, description='Data Noise:', layout={'width': '80%'}, continuous_update=False))
+        y_true = np.sin
