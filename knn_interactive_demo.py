@@ -1,8 +1,8 @@
 #
-# knn_interactive_demo.py
+# knn_interactive_demo_v2.py
 #
-# This script creates interactive tools for demonstrating k-Nearest Neighbors
-# (kNN) for both classification and regression tasks.
+# This script creates improved interactive tools for kNN, featuring
+# more challenging classification data and enhanced regression metrics.
 #
 
 import numpy as np
@@ -11,65 +11,68 @@ import matplotlib.pyplot as plt
 from matplotlib.colors import ListedColormap
 import seaborn as sns
 from sklearn.neighbors import KNeighborsClassifier, KNeighborsRegressor
-from sklearn.datasets import make_blobs
+from sklearn.datasets import make_classification # Better for creating challenging datasets
 from sklearn.metrics import mean_squared_error
 from ipywidgets import interact, IntSlider, FloatSlider
 import warnings
 
 warnings.filterwarnings("ignore", category=UserWarning)
 
-# --- Simulator for kNN Classification ---
+# --- Simulator for kNN Classification (Version 2) ---
 
 class kNNClassificationSimulator:
     """
-    An interactive simulator for kNN Classification to visualize
-    the effect of 'k' and data noise on the decision boundary.
+    An interactive simulator for kNN Classification.
+    V2 uses more challenging, overlapping data to better illustrate the model's behavior.
     """
     
-    def __init__(self, n_samples=150, n_classes=3):
+    def __init__(self, n_samples=200, n_classes=3):
         self.n_samples = n_samples
         self.n_classes = n_classes
-        self.custom_cmap = ListedColormap(['#1f77b4', '#ff7f0e', '#2ca02c']) # Blue, Orange, Green
+        self.custom_cmap = ListedColormap(['#1f77b4', '#ff7f0e', '#2ca02c'])
 
-    def _plot_classification(self, k, noise):
+    def _plot_classification(self, k, class_sep, flip_y):
         """Core plotting function linked to the interactive sliders."""
         
-        # 1. Generate new data based on noise level
-        X, y = make_blobs(n_samples=self.n_samples, centers=self.n_classes, 
-                          cluster_std=noise, random_state=42)
+        # 1. Generate more challenging, overlapping data
+        X, y = make_classification(
+            n_samples=self.n_samples,
+            n_features=2,
+            n_informative=2,
+            n_redundant=0,
+            n_classes=self.n_classes,
+            n_clusters_per_class=1,
+            class_sep=class_sep,  # Key parameter for controlling separation
+            flip_y=flip_y,        # Key parameter for introducing label noise
+            random_state=42
+        )
         
         # 2. Fit the kNN model
-        if k > len(X): k = len(X) # k cannot be larger than the number of samples
         knn = KNeighborsClassifier(n_neighbors=k)
         knn.fit(X, y)
-        accuracy = knn.score(X, y) # Calculate accuracy on the training data
+        accuracy = knn.score(X, y)
         
         # 3. Create a meshgrid to plot the decision boundary
-        h = .05 # step size in the mesh
+        h = .05
         x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
         y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
-        xx, yy = np.meshgrid(np.arange(x_min, x_max, h),
-                             np.arange(y_min, y_max, h))
-        Z = knn.predict(np.c_[xx.ravel(), yy.ravel()])
-        Z = Z.reshape(xx.shape)
+        xx, yy = np.meshgrid(np.arange(x_min, x_max, h), np.arange(y_min, y_max, h))
+        Z = knn.predict(np.c_[xx.ravel(), yy.ravel()]).reshape(xx.shape)
         
         # 4. Plotting
         plt.style.use('seaborn-v0_8-whitegrid')
         fig, ax = plt.subplots(figsize=(10, 8))
-        
-        # Plot the decision boundary
         ax.contourf(xx, yy, Z, cmap=self.custom_cmap, alpha=0.3)
-        
-        # Plot the data points
         sns.scatterplot(x=X[:, 0], y=X[:, 1], hue=y, palette=self.custom_cmap, 
                         alpha=1.0, edgecolor='k', s=80, ax=ax, legend=False)
 
         # 5. Display Information
         info_text = (f'Hyperparameters:\n'
                      f'  - k (Neighbors): {k}\n'
-                     f'  - Data Noise: {noise:.2f}\n\n'
+                     f'  - Class Separation: {class_sep:.2f}\n'
+                     f'  - Label Noise: {flip_y:.2f}\n\n'
                      f'Fit Metric:\n'
-                     f'  - Accuracy: {accuracy:.2%}')
+                     f'  - Training Accuracy: {accuracy:.2%}')
         ax.text(0.02, 0.98, info_text, transform=ax.transAxes, fontsize=12,
                 verticalalignment='top', bbox=dict(boxstyle='round', fc='wheat', alpha=0.8))
 
@@ -81,54 +84,55 @@ class kNNClassificationSimulator:
     def run(self):
         """Launches the interactive classification simulator."""
         interact(self._plot_classification,
-                 k=IntSlider(value=5, min=1, max=50, step=1, description='k (Neighbors):', layout={'width': '80%'}, continuous_update=False),
-                 noise=FloatSlider(value=1.0, min=0.2, max=4.0, step=0.1, description='Data Noise:', layout={'width': '80%'}, continuous_update=False))
+                 k=IntSlider(value=7, min=1, max=50, step=1, description='k (Neighbors):', layout={'width': '80%'}, continuous_update=False),
+                 class_sep=FloatSlider(value=0.8, min=0.1, max=2.0, step=0.1, description='Class Separation:', layout={'width': '80%'}, continuous_update=False),
+                 flip_y=FloatSlider(value=0.05, min=0, max=0.4, step=0.01, description='Label Noise:', layout={'width': '80%'}, continuous_update=False))
 
 
-# --- Simulator for kNN Regression ---
+# --- Simulator for kNN Regression (Version 2) ---
 
 class kNNRegressionSimulator:
     """
-    An interactive simulator for kNN Regression to visualize
-    how 'k' and noise affect the prediction curve.
+    An interactive simulator for kNN Regression.
+    V2 adds a second, crucial metric: RMSE vs. the "true" function.
     """
     
     def __init__(self, n_samples=100):
         self.n_samples = n_samples
+        # Generate the base data once
+        self.X = np.sort(10 * np.random.rand(self.n_samples))
+        self.y_true = np.sin(self.X) + self.X / 5
 
     def _plot_regression(self, k, noise):
         """Core plotting function linked to the interactive sliders."""
         
-        # 1. Generate new data
-        X = np.sort(10 * np.random.rand(self.n_samples))
-        y_true = np.sin(X) + X / 5
-        y_noisy = y_true + np.random.normal(0, noise, self.n_samples)
-        
-        # Reshape for scikit-learn
-        X_reshaped = X.reshape(-1, 1)
+        # 1. Add noise to the true function
+        y_noisy = self.y_true + np.random.normal(0, noise, self.n_samples)
+        X_reshaped = self.X.reshape(-1, 1)
 
         # 2. Fit the kNN model
         knn = KNeighborsRegressor(n_neighbors=k)
         knn.fit(X_reshaped, y_noisy)
         y_pred = knn.predict(X_reshaped)
         
-        # 3. Calculate fit metric
-        rmse = np.sqrt(mean_squared_error(y_noisy, y_pred))
+        # 3. Calculate BOTH fit metrics
+        rmse_vs_data = np.sqrt(mean_squared_error(y_noisy, y_pred))
+        rmse_vs_true = np.sqrt(mean_squared_error(self.y_true, y_pred))
 
         # 4. Plotting
         plt.style.use('seaborn-v0_8-whitegrid')
         fig, ax = plt.subplots(figsize=(12, 7))
-
-        ax.plot(X, y_true, ':', color='black', lw=2, label='True Underlying Function')
-        sns.scatterplot(x=X, y=y_noisy, alpha=0.6, label='Noisy Data Points')
-        ax.plot(X, y_pred, '-', color='red', lw=3, label='kNN Prediction Line')
+        ax.plot(self.X, self.y_true, ':', color='black', lw=2, label='True Underlying Function')
+        sns.scatterplot(x=self.X, y=y_noisy, alpha=0.6, label='Noisy Data Points')
+        ax.plot(self.X, y_pred, '-', color='red', lw=3, label='kNN Prediction Line')
         
-        # 5. Display Information
+        # 5. Display Enhanced Information
         info_text = (f'Hyperparameters:\n'
                      f'  - k (Neighbors): {k}\n'
                      f'  - Data Noise: {noise:.2f}\n\n'
-                     f'Fit Metric:\n'
-                     f'  - RMSE: {rmse:.3f} (Lower is better)')
+                     f'Performance Metrics (Lower is Better):\n'
+                     f'  - RMSE (vs. Noisy Data): {rmse_vs_data:.3f}\n'
+                     f'  - RMSE (vs. True Function): {rmse_vs_true:.3f}')
         ax.text(0.02, 0.98, info_text, transform=ax.transAxes, fontsize=12,
                 verticalalignment='top', bbox=dict(boxstyle='round', fc='wheat', alpha=0.8))
 
@@ -136,11 +140,11 @@ class kNNRegressionSimulator:
         ax.set_xlabel('Feature (X)')
         ax.set_ylabel('Outcome (Y)')
         ax.legend(loc='lower right')
-        ax.set_ylim(min(y_true) - 2*noise - 1, max(y_true) + 2*noise + 1)
+        ax.set_ylim(min(self.y_true)-3, max(self.y_true)+3)
         plt.show()
 
     def run(self):
         """Launches the interactive regression simulator."""
         interact(self._plot_regression,
-                 k=IntSlider(value=5, min=1, max=self.n_samples, step=1, description='k (Neighbors):', layout={'width': '80%'}, continuous_update=False),
-                 noise=FloatSlider(value=0.5, min=0, max=2.0, step=0.1, description='Data Noise:', layout={'width': '80%'}, continuous_update=False))
+                 k=IntSlider(value=10, min=1, max=self.n_samples, step=1, description='k (Neighbors):', layout={'width': '80%'}, continuous_update=False),
+                 noise=FloatSlider(value=0.6, min=0, max=2.0, step=0.1, description='Data Noise:', layout={'width': '80%'}, continuous_update=False))
