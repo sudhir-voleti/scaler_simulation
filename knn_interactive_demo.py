@@ -1,8 +1,9 @@
 #
-# knn_interactive_demo_v4.py
+# knn_interactive_demo_v5.py
 #
-# Corrected kNN classification simulator that resolves the ValueError
-# by using a sufficient number of informative features.
+# This version correctly generates high-dimensional data and plots a 2D
+# slice of it to create the desired visual complexity, resolving the
+# previous ValueError for good.
 #
 
 import numpy as np
@@ -20,7 +21,8 @@ warnings.filterwarnings("ignore", category=UserWarning)
 class kNNClassificationSimulator:
     """
     An interactive simulator for kNN Classification.
-    V4 fixes the ValueError from V3 by correctly setting n_informative.
+    V5 correctly generates complex, high-dimensional data and visualizes
+    a 2D projection to create a challenging classification task.
     """
     
     def __init__(self, n_samples=250, n_classes=3):
@@ -31,13 +33,13 @@ class kNNClassificationSimulator:
     def _plot_classification(self, k, class_sep, flip_y):
         """Core plotting function linked to the interactive sliders."""
         
-        # 1. Generate challenging data with the corrected parameter
-        X, y = make_classification(
+        # 1. Generate data in a higher dimension (4D) to satisfy constraints
+        #    This allows for 2^4 = 16 positions for our 3*2=6 clusters.
+        X_full, y = make_classification(
             n_samples=self.n_samples,
-            n_features=2,           # We still only want a 2D plot
-            n_informative=3,        # *** THE FIX IS HERE: Was 2, now 3 ***
-            n_redundant=0,
-            n_repeated=0,
+            n_features=4,           # *** FIX: Generate 4 features
+            n_informative=3,        # *** FIX: Use 3 informative features
+            n_redundant=1,          # Add a redundant feature
             n_classes=self.n_classes,
             n_clusters_per_class=2,
             class_sep=class_sep,
@@ -45,12 +47,15 @@ class kNNClassificationSimulator:
             random_state=42
         )
         
-        # 2. Fit the kNN model
+        # *** FIX: We will only use the first two features for our 2D model & plot ***
+        X = X_full[:, :2]
+        
+        # 2. Fit the kNN model on the 2D data
         knn = KNeighborsClassifier(n_neighbors=k)
         knn.fit(X, y)
         accuracy = knn.score(X, y)
         
-        # 3. Create a meshgrid to plot the decision boundary
+        # 3. Create a meshgrid for the 2D plot
         h = .05
         x_min, x_max = X[:, 0].min() - 1, X[:, 0].max() + 1
         y_min, y_max = X[:, 1].min() - 1, X[:, 1].max() + 1
@@ -83,5 +88,5 @@ class kNNClassificationSimulator:
         """Launches the interactive classification simulator with messy defaults."""
         interact(self._plot_classification,
                  k=IntSlider(value=15, min=1, max=100, step=1, description='k (Neighbors):', layout={'width': '80%'}, continuous_update=False),
-                 class_sep=FloatSlider(value=0.5, min=0.1, max=1.5, step=0.05, description='Class Separation:', layout={'width': '80%'}, continuous_update=False),
-                 flip_y=FloatSlider(value=0.2, min=0, max=0.5, step=0.01, description='Label Noise:', layout={'width': '80%'}, continuous_update=False))
+                 class_sep=FloatSlider(value=0.6, min=0.1, max=1.5, step=0.05, description='Class Separation:', layout={'width': '80%'}, continuous_update=False),
+                 flip_y=FloatSlider(value=0.25, min=0, max=0.5, step=0.01, description='Label Noise:', layout={'width': '80%'}, continuous_update=False))
