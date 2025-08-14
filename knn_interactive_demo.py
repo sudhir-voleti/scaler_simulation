@@ -1,8 +1,8 @@
 #
-# knn_interactive_demo_v3.py
+# knn_interactive_demo_v4.py
 #
-# A heavily revised kNN classification simulator designed to produce
-# challenging, noisy, and overlapping class distributions.
+# Corrected kNN classification simulator that resolves the ValueError
+# by using a sufficient number of informative features.
 #
 
 import numpy as np
@@ -20,29 +20,26 @@ warnings.filterwarnings("ignore", category=UserWarning)
 class kNNClassificationSimulator:
     """
     An interactive simulator for kNN Classification.
-    V3 is specifically designed to create a "messy" data environment
-    with significant class overlap and label noise.
+    V4 fixes the ValueError from V3 by correctly setting n_informative.
     """
     
     def __init__(self, n_samples=250, n_classes=3):
         self.n_samples = n_samples
         self.n_classes = n_classes
-        # Using a more distinct color map for clarity in the mess
         self.custom_cmap = ListedColormap(['#e41a1c', '#377eb8', '#4daf4a']) # Red, Blue, Green
 
     def _plot_classification(self, k, class_sep, flip_y):
         """Core plotting function linked to the interactive sliders."""
         
-        # 1. Generate MUCH more challenging, overlapping data
-        #    - n_clusters_per_class=2: Each class is now two separate blobs.
-        #    - class_sep is low, flip_y is high by default.
+        # 1. Generate challenging data with the corrected parameter
         X, y = make_classification(
             n_samples=self.n_samples,
-            n_features=2,
-            n_informative=2,
+            n_features=2,           # We still only want a 2D plot
+            n_informative=3,        # *** THE FIX IS HERE: Was 2, now 3 ***
             n_redundant=0,
+            n_repeated=0,
             n_classes=self.n_classes,
-            n_clusters_per_class=2, # <--- THIS IS A KEY CHANGE
+            n_clusters_per_class=2,
             class_sep=class_sep,
             flip_y=flip_y,
             random_state=42
