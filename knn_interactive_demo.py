@@ -1,7 +1,7 @@
 # knn_interactive_demo.py
 #
-# A robust kNN simulator for a binary classification task.
-# This version uses the 'make_moons' dataset and corrects all previous errors.
+# A robust, interactive kNN simulator for a binary classification task.
+# This version includes a slider for the number of data points.
 #
 
 import numpy as np
@@ -20,19 +20,20 @@ class kNN_Simulator:
     An interactive simulator for kNN on a challenging binary classification task.
     """
     
-    def __init__(self, n_samples=200):
-        self.n_samples = n_samples
-        
-        # *** THE FIX IS HERE ***
-        # Define the colors as a simple list for seaborn
-        self.colors = ['#e41a1c', '#377eb8']
-        # Create the colormap object from the list for matplotlib's contourf
+    def __init__(self):
+        # Define colors once
+        self.colors = ['#e41a1c', '#377eb8'] # Red, Blue
         self.custom_cmap = ListedColormap(self.colors)
 
-    def _plot_classification(self, k, noise):
-        """Core plotting function linked to the interactive sliders."""
+    def _plot_classification(self, n_samples, k, noise):
+        """Core plotting function now includes n_samples."""
         
-        X, y = make_moons(n_samples=self.n_samples, noise=noise, random_state=42)
+        # Generate data using parameters from the sliders
+        X, y = make_moons(n_samples=n_samples, noise=noise, random_state=42)
+        
+        # Ensure k is not larger than the number of samples
+        if k > n_samples:
+            k = n_samples
         
         knn = KNeighborsClassifier(n_neighbors=k)
         knn.fit(X, y)
@@ -47,8 +48,27 @@ class kNN_Simulator:
         plt.style.use('seaborn-v0_8-whitegrid')
         fig, ax = plt.subplots(figsize=(10, 8))
         
-        # Use the colormap object for the background
         ax.contourf(xx, yy, Z, cmap=self.custom_cmap, alpha=0.3)
-        # Use the simple list of colors for the scatterplot palette
         sns.scatterplot(x=X[:, 0], y=X[:, 1], hue=y, palette=self.colors, 
-                        alpha=0.9, edgecolor='k', s=70, ax=ax, legend=Fals
+                        alpha=0.9, edgecolor='k', s=70, ax=ax, legend=False)
+
+        info_text = (f'Hyperparameters:\n'
+                     f'  - Data Points: {n_samples}\n'
+                     f'  - k (Neighbors): {k}\n'
+                     f'  - Data Noise: {noise:.2f}\n\n'
+                     f'Fit Metric:\n'
+                     f'  - Training Accuracy: {accuracy:.2%}')
+        ax.text(0.02, 0.98, info_text, transform=ax.transAxes, fontsize=12,
+                verticalalignment='top', bbox=dict(boxstyle='round', fc='wheat', alpha=0.8))
+
+        ax.set_title(f'kNN Decision Boundary', fontsize=16)
+        ax.set_xlabel('Feature 1')
+        ax.set_ylabel('Feature 2')
+        plt.show()
+
+    def run(self):
+        """Launches the interactive simulator with all three sliders."""
+        interact(self._plot_classification,
+                 n_samples=IntSlider(value=200, min=50, max=1000, step=50, description='Data Points:', layout={'width': '80%'}, continuous_update=False),
+                 k=IntSlider(value=15, min=1, max=100, step=1, description='k (Neighbors):', layout={'width': '80%'}, continuous_update=False),
+                 noise=FloatSlider(value=0.3, min=0.0, max=0.5, step=0.01, description='Data Noise:', layout={'width': '80%'}, continuous_update=False))
